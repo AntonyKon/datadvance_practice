@@ -41,7 +41,7 @@ def main():
     # model = builder.build(X, Y, options={'GTApprox/CategoricalVariables': [0], 'GTApprox/Technique': 'RSM'})
 
     if isinstance(builder, BuilderWithEncoding):
-        diamonds_for_checking = Encoder('binary', cols=diamonds.columns.values[1:4]).fit_transform(diamonds.loc[stop:, :])
+        diamonds_for_checking = Encoder('leave_one_out', cols=diamonds.columns.values[1:4]).fit_transform(diamonds.loc[stop:, :], diamonds.loc[stop:, :]['price'])
     else:
         diamonds_for_checking = diamonds.loc[stop:, :]
 
