@@ -21,14 +21,16 @@ class Encoder:
 
     def transform(self, X):
         if self.encoding_type == 'binary':
-            return self.__binary_transform(X)
+            return self.__transform_with_class(X, ce.OneHotEncoder)
+        elif self.encoding_type == 'mean':
+            pass
 
     def fit_transform(self, X):
         return self.fit(X).transform(X)
 
-    def __binary_transform(self, X):
+    def __transform_with_class(self, X, SpecialEncoder):
         X_copy = X.copy()
-        encoder = ce.OneHotEncoder(cols=self.columns)
+        encoder = SpecialEncoder(cols=self.columns)
         transformed = encoder.fit(X_copy).transform(X_copy)
 
         return transformed
