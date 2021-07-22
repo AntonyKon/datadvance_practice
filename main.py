@@ -6,6 +6,7 @@ from sklearn.preprocessing import LabelEncoder
 from pydataset import data
 import sys
 from BuilderWithEncoding import BuilderWithEncoding
+from RRMS_checking import RRMS_calc
 import matplotlib.pyplot as plt
 
 def sort_sample(Y):
@@ -27,7 +28,7 @@ def main():
     diamonds_for_education = diamonds.loc[:stop, :]
     X = diamonds_for_education.drop(columns=["price"])
     Y = diamonds_for_education.price.values
-    builder = BuilderWithEncoding()
+    builder = gtapprox.Builder()
 
     builder.set_logger(loggers.StreamLogger())
 
@@ -54,19 +55,12 @@ def main():
     #
     # model = builder.build(X, Y, options={'GTApprox/CategoricalVariables': [0], 'GTApprox/Technique': 'RSM'})
 
-    diamonds_for_checking = Encoder('binary', cols=diamonds.columns.values[1:4]).fit_transform(diamonds.loc[stop:, :])
-    n = 100
+    diamonds_for_checking = diamonds.loc[stop:, :] # Encoder('binary', cols=diamonds.columns.values[1:4]).
+    n = 1000
 
-    tests = 1000
-    RRMS_mean = 0
-    for i in range(tests):
-        rows = [row for index, row in diamonds_for_checking.sample(n=n).iterrows()]
-        #     predicted_values = [model.calc(row.drop(labels=['price']).to_numpy())[0] for row in rows]
-        exact_values = [row.at['price'] for row in rows]
-        RRMS_mean += model.validate([row.drop(labels=['price']).to_numpy() for row in rows], exact_values)['RRMS'][0]
-        sys.stdout.write(str(i) + '\n')
-    #     print(i)
-    print(RRMS_mean / tests)
+    tests = 100
+
+    print(RRMS_calc(model, diamonds_for_checking, n, tests))
 
 
 
