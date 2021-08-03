@@ -13,7 +13,14 @@ from RRMS_checking import RRMS_calc
 import matplotlib.pyplot as plt
 
 
+# GBRT, RSM: binarization, submodels for gtapprox.builder and BuilderWithEncoding
+# HDA: submodels for gtapprox.builder and BuilderWithEncoding
+
 def filter_dataset(dataset, columns, group_size):
+    # dataset.shape[0] / dataset[columns].drop_duplicates().shape[0]
+    # unique_values = data[column_1].unique() # a, b, c
+    # mask = np.zeros((x.shape[0], unique_values.size), dtype=bool)
+    # x[mask[:, 0], column_1]
     return dataset.groupby(columns).filter(lambda x: len(x) > group_size)
 
 
@@ -45,8 +52,8 @@ def main(technique=None):
     print(dataset_for_education)
     X = dataset_for_education.drop(columns=["price"])
     Y = dataset_for_education.price
-    # builder = gtapprox.Builder()
-    builder = BuilderWithEncoding()
+    builder = gtapprox.Builder()
+    # builder = BuilderWithEncoding()
 
     # builder.set_logger(loggers.StreamLogger())
 
@@ -54,9 +61,9 @@ def main(technique=None):
         "GTApprox/CategoricalVariables": [1, 2, 3],
         "GTApprox/Accelerator": 1,
         "GTApprox/Technique": technique,
-        "/GTApprox/EncodingOptions": [{('cut', 'color', 'clarity'): ce.OrdinalEncoder},
-                                      {('cut', 'color', 'clarity'): EncoderSubsample}
-                                      ]
+        "/GTApprox/EncodingOptions": [(('cut', 'color', 'clarity'), (ce.OrdinalEncoder, EncoderSubsample)),
+
+                                      ]  # 2*x.shape[1] + 1
         #     "GTApprox/GBRTShrinkage": 0.01,
         #     "GTApprox/GBRTSubsampleRatio": 0.1,
         #     "GTApprox/GBRTColsampleRatio": 0.6
@@ -78,7 +85,6 @@ def main(technique=None):
     result = None
 
     dots = np.linspace(0, 99, 100)
-
 
     Y_predict = model.calc(X_test)
 

@@ -37,7 +37,7 @@ class BuilderWithEncoding(gtapprox.Builder):
             else:
                 model = Model()
 
-                x_transformed = encoder.fit_transform(x, y)
+                x_transformed = encoder.transform(x, y)
                 model.encoder = encoder
                 model.model = self.__build_tree_models(x_transformed, y, **kwargs)
 
