@@ -7,8 +7,10 @@ class BaseModel(object):
         raise NotImplementedError()
 
     def validate(self, x, y_true):
-        if isinstance(y_true, (pd.DataFrame, pd.Series)):
+        if isinstance(y_true, pd.DataFrame):
             y_true = y_true.to_numpy()
+        elif isinstance(y_true, pd.Series):
+            y_true = y_true.to_numpy().reshape((-1, 1))
         elif isinstance(y_true, (list, tuple)):
             y_true = np.array(y_true)
         elif isinstance(y_true, dict):
@@ -19,8 +21,8 @@ class BaseModel(object):
 
         errors = dict()
 
-        errors['RRMS'] = np.sqrt(np.mean(absolute_errors ** 2)) / np.std(y_true, ddof=1)
         errors['RMS'] = np.sqrt(np.mean(absolute_errors) ** 2)
+        errors['RRMS'] = errors['RMS'] / np.std(y_true, ddof=1)
         errors['Mean'] = np.mean(absolute_errors)
         errors['Max'] = np.max(absolute_errors)
         errors['R^2'] = 1 - (errors['RMS'] ** 2) / np.var(y_predict)
@@ -32,7 +34,6 @@ class BaseModel(object):
 class Submodels(BaseModel):
     def __init__(self, models=None, columns=None):
         '''
-
         :param models: dict, where key = values of special columns, value = model
         :param columns: tuple of column names
         '''
@@ -48,12 +49,10 @@ class Submodels(BaseModel):
                 model = self.models.get(values, None)
                 if model is not None:
                     res = model.calc(x_input)
-                    if len(res) == 1:
-                        res = res[0]
                     y.append(res)
                 else:
                     y.append(np.nan)
-            return y
+            return np.array(y)
         elif isinstance(x, pd.Series):
             values = tuple(x.loc[self.columns[0]: self.columns[-1]])
             model = self.models.get(values, None)
