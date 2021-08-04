@@ -2,23 +2,32 @@ from da.p7core_6_23_400 import gtapprox
 from EncoderSubsample import EncoderSubsample
 from models import Model, Submodels
 from copy import deepcopy
+from operator import itemgetter
 
 
 # [{('col1', 'col2', 'col3'): EncoderSubsample}]
 #
 #
 # [{('col1', 'col2'): EncoderSubsample}, {('col3'): Encoder1}]
-# [{('col3'): Encoder1}, {('col1', 'col2'): EncoderSubsample}, {('col4'): EncoderSubsample}]
+# [(('col1', 'col2', 'col3'), (ce.OrdinalEncoder, EncoderSubsample)), {('col4'): EncoderSubsample}]
 
 class BuilderWithEncoding(gtapprox.Builder):
     def __build_tree_models(self, x, y, **kwargs):
         encoding_options = kwargs['options'].get("/GTApprox/EncodingOptions", [])
 
         if encoding_options:
-            columns, Encoder = encoding_options[0].popitem()
-            encoder = Encoder(cols=columns).fit(x)
+            columns, Encoder = encoding_options[0]
 
-            kwargs['options']["/GTApprox/EncodingOptions"].pop(0)
+            if isinstance(Encoder, (tuple, list)):
+                i = kwargs.get('encoder_index', 0)
+                Encoder = Encoder[i]
+                kwargs['encoder_index'] = i + 1
+
+                if i + 1 == len(encoding_options[0][1]):
+                    encoding_options.pop(0)
+            else:
+                encoding_options.pop(0)
+            encoder = Encoder(cols=columns).fit(x)
 
             if isinstance(encoder, EncoderSubsample):
                 submodels = Submodels()
@@ -27,12 +36,11 @@ class BuilderWithEncoding(gtapprox.Builder):
 
                 for columns, group in encoder.transform_to_datasets(x):
                     print(columns, len(group))
-                    indexes = group.index.tolist()
-                    y_group = [y[i] for i in indexes]
+                    indexes = group.index.to_numpy()
+                    y_group = itemgetter(indexes)(y)
 
                     submodels.models[columns] = self.__build_tree_models(group, y_group, **deepcopy(kwargs))
 
-                print(submodels)
                 return submodels
             else:
                 model = Model()
@@ -43,6 +51,7 @@ class BuilderWithEncoding(gtapprox.Builder):
 
                 return model
         else:
+            kwargs.pop('encoder_index', None)
             return super().build(x, y, **kwargs)
 
     def build(self, x, y, options=None, outputNoiseVariance=None, comment=None, weights=None, initial_model=None,
