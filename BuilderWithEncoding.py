@@ -4,16 +4,14 @@ from models import Model, Submodels
 from copy import deepcopy
 from operator import itemgetter
 import pandas as pd
+from preprocessing import build_configuration, to_dataframe
 
 
 # [{('col1', 'col2', 'col3'): EncoderSubsample}]
 #
 #
 # [{('col1', 'col2'): EncoderSubsample}, {('col3'): Encoder1}]
-# [(('col1', 'col2', 'col3'), (ce.OrdinalEncoder, EncoderSubsample)), {('col4'): EncoderSubsample}]
-
-def to_dataframe(x):
-    return pd.DataFrame(x, columns=[f'col{i}' for i in range(len(x[0]))])
+# [(('col1', 'col2', 'col3'), (ce.OrdinalEncoder, EncoderSubsample)), {('col4'): EncoderSubsample}
 
 
 class BuilderWithEncoding(gtapprox.Builder):
@@ -69,6 +67,10 @@ class BuilderWithEncoding(gtapprox.Builder):
             categorical_variables = options.get("GTApprox/CategoricalVariables", [])
 
             if categorical_variables:
+                if not options.get("/GTApprox/EncodingOptions", False):
+                    options["/GTApprox/EncodingOptions"] = build_configuration(x, itemgetter(categorical_variables)(x.columns.to_numpy()))
+                print(options["/GTApprox/EncodingOptions"])
+
                 del options["GTApprox/CategoricalVariables"]
                 return self.__build_tree_models(x, y, options=options, outputNoiseVariance=outputNoiseVariance,
                                                 comment=comment, weights=weights, initial_model=initial_model,
