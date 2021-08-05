@@ -3,6 +3,7 @@ from EncoderSubsample import EncoderSubsample
 from models import Model, Submodels
 from copy import deepcopy
 from operator import itemgetter
+import pandas as pd
 
 
 # [{('col1', 'col2', 'col3'): EncoderSubsample}]
@@ -11,7 +12,12 @@ from operator import itemgetter
 # [{('col1', 'col2'): EncoderSubsample}, {('col3'): Encoder1}]
 # [(('col1', 'col2', 'col3'), (ce.OrdinalEncoder, EncoderSubsample)), {('col4'): EncoderSubsample}]
 
+def to_dataframe(x):
+    return pd.DataFrame(x, columns=[f'col{i}' for i in range(len(x[0]))])
+
+
 class BuilderWithEncoding(gtapprox.Builder):
+
     def __build_tree_models(self, x, y, **kwargs):
         encoding_options = kwargs['options'].get("/GTApprox/EncodingOptions", [])
 
@@ -56,6 +62,9 @@ class BuilderWithEncoding(gtapprox.Builder):
 
     def build(self, x, y, options=None, outputNoiseVariance=None, comment=None, weights=None, initial_model=None,
               annotations=None, x_meta=None, y_meta=None):
+        if not isinstance(x, pd.DataFrame):
+            x = to_dataframe(x)
+
         if options:
             categorical_variables = options.get("GTApprox/CategoricalVariables", [])
 
