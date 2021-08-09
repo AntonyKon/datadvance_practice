@@ -3,6 +3,7 @@ import pandas as pd
 
 
 class BaseModel(object):
+
     def calc(self, x):
         raise NotImplementedError()
 
@@ -21,63 +22,53 @@ class BaseModel(object):
 
         errors = dict()
 
-        errors['RMS'] = np.sqrt(np.mean(absolute_errors) ** 2)
+        errors['RMS'] = np.sqrt(np.mean(absolute_errors ** 2))
         errors['RRMS'] = errors['RMS'] / np.std(y_true, ddof=1)
         errors['Mean'] = np.mean(absolute_errors)
         errors['Max'] = np.max(absolute_errors)
-        errors['R^2'] = 1 - (errors['RMS'] ** 2) / np.var(y_predict)
+        errors['R^2'] = 1 - (errors['RMS'] ** 2) / np.var(y_true, ddof=1)
         errors['Median'] = np.median(absolute_errors)
 
         return errors
 
 
 class Submodels(BaseModel):
+
     def __init__(self, models=None, columns=None):
         '''
-        :param models: dict, where key = values of special columns, value = model
-        :param columns: tuple of column names
-        '''
+    :param models: dict, where key = values of special columns, value = model
+    :param columns: tuple of column names
+    '''
+        self.models = models or {}
+        self.columns = columns or []
 
-        self.models = models
-        self.columns = columns
+    def __getitem__(self, key):
+        return self.models.get(key)
+
+    def __setitem__(self, key, model):
+        self.models[key] = model
 
     def calc(self, x):
-        if isinstance(x, pd.DataFrame):
-            y = []
-            for index, x_input in x.iterrows():
-                values = tuple(x_input[self.columns[0]: self.columns[-1]])
-                model = self.models.get(values, None)
-                if model is not None:
-                    res = model.calc(x_input)
-                    y.append(res)
-                else:
-                    y.append(np.nan)
-            return np.array(y)
-        elif isinstance(x, pd.Series):
-            values = tuple(x.loc[self.columns[0]: self.columns[-1]])
-            model = self.models.get(values, None)
-            if model is not None:
-                return model.calc(x)
-        return None
+        x = pd.DataFrame(x)
+        y = pd.DataFrame(index=x.index, columns=['output'])
+        for values, x_input in x.groupby(self.columns):
+            if values in self.models:
+                y.loc[x_input.index] = self.models[values].calc(x_input)
+        return y.to_numpy()
 
     def __str__(self):
         return '\n'.join([f'{columns}: {model}' for columns, model in self.models.items()])
 
 
 class Model(BaseModel):
+
     def __init__(self, model=None, encoder=None):
         self.model = model
         self.encoder = encoder
 
     def calc(self, x):
-        if isinstance(x, pd.Series):
-            x = x.to_frame().T
-        x = self.encoder.transform(x)
-        res = self.model.calc(x)
-
-        if len(res) == 1:
-            res = res[0]
-        return res
+        x = self.encoder.transform(pd.DataFrame(x))
+        return self.model.calc(x)
 
     def __str__(self):
         return f'{self.encoder}: {self.model}'
