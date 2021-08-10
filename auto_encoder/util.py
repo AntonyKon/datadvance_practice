@@ -1,5 +1,5 @@
 import category_encoders as ce
-from auto_encoder import DummyEncoder, SubsampleEncoder
+from .encoders import DummyEncoder, SubsampleEncoder
 import numpy as np
 import pandas as pd
 from collections import defaultdict
@@ -49,9 +49,11 @@ class ConfigurationManager:
             self.encoders = [SubsampleEncoder, DummyEncoder, ce.HashingEncoder, ce.OneHotEncoder, ce.LeaveOneOutEncoder]
 
     def build_configuration(self, categorical_variables):
+        if len(categorical_variables) == 0:
+            return []
+
         categorical_variables = self.x.iloc[:, categorical_variables].columns.to_numpy()
         actual_shape = self.x.shape[1]
-
         metric_checker = self.metrics(max_shape=2.5 * actual_shape, min_elements=2 * actual_shape + 4)
 
         configuration = defaultdict(list)
@@ -83,9 +85,8 @@ class ConfigurationManager:
         dataset_size = pd.Series([len(self.x)])
 
         if isinstance(encoder(), SubsampleEncoder):
-            groups_len = self.x.groupby(column).size()
-            score += metric_checker.std_limit(groups_len)
-            dataset_size = groups_len
+            dataset_size = self.x.groupby(column).size()
+            score += metric_checker.std_limit(dataset_size)
 
         score += metric_checker.elements_limit(dataset_size)
         tmp_transformed = encoder(cols=column).fit(self.x, self.y).transform(self.x) # leaveoneout turns into target encoder without y
