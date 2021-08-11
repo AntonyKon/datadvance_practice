@@ -19,11 +19,11 @@ class Builder(gtapprox.Builder):
         if len(encoding) == 0:
             return super(Builder, self).build(x, y, **kwargs)
 
-        encoder = encoding.pop(0).fit(x)
+        encoder = encoding.pop(0).fit(x, y)
         if isinstance(encoder, SubsampleEncoder):
             submodels = Submodels(columns=encoder.cols)
             for columns, xs, ys in encoder.iterate_subsamples(x, y):
-                print(columns, len(xs))
+                # print(columns, len(xs))
                 submodels[columns] = self.build(xs, ys, encoding, **kwargs)
             return submodels
         else:
