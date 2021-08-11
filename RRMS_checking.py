@@ -1,4 +1,4 @@
-from BuilderWithEncoding import BuilderWithEncoding
+from auto_encoder import Builder
 from da.p7core_6_23_400 import gtapprox
 import category_encoders as ce
 from pydataset import data
@@ -7,7 +7,7 @@ import numpy as np
 
 
 def get_default_model_RRMS(x, y, x_test, y_test, categorical_variables, technique='RSM', binarization=True):
-    variable_names = x.columns.to_numpy()
+    variable_names = x.columns[categorical_variables].to_numpy()
     encoder = ce.OrdinalEncoder(variable_names).fit(x)
     x = encoder.transform(x)
 
@@ -26,7 +26,7 @@ def get_default_model_RRMS(x, y, x_test, y_test, categorical_variables, techniqu
 
 
 def get_encoded_model_RRMS(x, y, x_test, y_test, categorical_variables, technique='RSM', binarization=True):
-    builder = BuilderWithEncoding()
+    builder = Builder()
 
     options = {
         "GTApprox/CategoricalVariables": categorical_variables,
@@ -45,11 +45,14 @@ def main():
     tests = 1000
     categorical_variables = [1, 2, 3]
     y_columns = ["price"]
+
+    np.random.seed(tests)
+
     print(dataset)
     # test - 10%
     # education - 60-70%
 
-    dataset_for_testing = dataset.sample(frac=1).reset_index(drop=True).tail(100)
+    dataset_for_testing = dataset.sample(frac=1, random_state=tests).reset_index(drop=True).tail(100)
     x_test = dataset_for_testing.drop(columns=y_columns)
     y_test = dataset_for_testing.loc[:, y_columns]
 
