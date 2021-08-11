@@ -46,7 +46,7 @@ class ConfigurationManager:
         self.y = y
 
         if self.encoders is None:
-            self.encoders = [SubsampleEncoder, DummyEncoder, ce.HashingEncoder, ce.OneHotEncoder, ce.LeaveOneOutEncoder]
+            self.encoders = [SubsampleEncoder, DummyEncoder, ce.LeaveOneOutEncoder, ce.BinaryEncoder]
 
     def build_configuration(self, categorical_variables):
         if len(categorical_variables) == 0:
@@ -62,12 +62,18 @@ class ConfigurationManager:
             scores = dict()
 
             for encoder in self.encoders:
-                scores[encoder] = self.__validate(encoder, metric_checker, actual_shape, column)
+                all_columns = None
+                if isinstance(encoder(), SubsampleEncoder):
+                    all_columns = configuration[SubsampleEncoder] + [column]
+
+                scores[encoder] = self.__validate(encoder, metric_checker, actual_shape, column, all_columns=all_columns)
 
             optimal_encoder = min(scores, key=scores.get)
 
             if isinstance(optimal_encoder(), SubsampleEncoder):
                 configuration[ce.OrdinalEncoder].append(column)
+
+
             configuration[optimal_encoder].append(column)
 
             tmp_transformed = optimal_encoder(column).fit_transform(self.x, self.y)
@@ -80,12 +86,12 @@ class ConfigurationManager:
         return sorted([encoder(cols=configuration[encoder]) for encoder in configuration],
                       key=lambda encoder: dict_for_sort[type(encoder)])
 
-    def __validate(self, encoder, metric_checker, actual_shape, column):
+    def __validate(self, encoder, metric_checker, actual_shape, column, all_columns=None):
         score = 0
         dataset_size = pd.Series([len(self.x)])
 
         if isinstance(encoder(), SubsampleEncoder):
-            dataset_size = self.x.groupby(column).size()
+            dataset_size = self.x.groupby(all_columns).size()
             score += metric_checker.std_limit(dataset_size)
 
         score += metric_checker.elements_limit(dataset_size)
