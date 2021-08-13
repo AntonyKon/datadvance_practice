@@ -18,18 +18,17 @@ class BaseModel(object):
             y_true = np.array(list(y_true.values()))
 
         y_predict = np.array(self.calc(x))
-        absolute_errors = np.abs(y_predict - y_true)
-
-        errors = dict()
-
-        errors['RMS'] = np.sqrt(np.mean(absolute_errors ** 2))
-        errors['RRMS'] = errors['RMS'] / np.std(y_true, ddof=1)
-        errors['Mean'] = np.mean(absolute_errors)
-        errors['Max'] = np.max(absolute_errors)
-        errors['R^2'] = 1 - (errors['RMS'] ** 2) / np.var(y_true, ddof=1)
-        errors['Median'] = np.median(absolute_errors)
-
-        return errors
+        is_nan = np.isnan(y_predict)
+        absolute_errors = np.abs(y_predict - y_true)[~is_nan]
+        rms = np.sqrt(np.mean(absolute_errors ** 2))
+        return {
+            'RMS': rms,
+            'RRMS': rms / np.std(y_true, ddof=1),
+            'Mean': np.mean(absolute_errors),
+            'Max': np.max(absolute_errors),
+            'R^2': 1 - (rms ** 2) / np.var(y_true, ddof=1),
+            'Median': np.median(absolute_errors),
+        }
 
 
 class Submodels(BaseModel):
@@ -54,7 +53,7 @@ class Submodels(BaseModel):
         for values, x_input in x.groupby(self.columns):
             if values in self.models:
                 y.loc[x_input.index] = self.models[values].calc(x_input)
-        return y.to_numpy()
+        return y.to_numpy(dtype=float)
 
     def __str__(self):
         return '\n'.join([f'{columns}: {model}' for columns, model in self.models.items()])
