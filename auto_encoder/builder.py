@@ -2,20 +2,17 @@ import pandas as pd
 from da.p7core_6_23_400 import gtapprox
 from .encoders import SubsampleEncoder
 from .models import Model, Submodels
-from .util import ConfigurationManager
-import numpy as np
-import category_encoders as ce
+from .manager import ConfigurationManager
 from copy import deepcopy
-
 
 class Builder(gtapprox.Builder):
 
     def build(self, x, y, encoding=None, **kwargs):
         if encoding is None:
             categorical_variables = kwargs.setdefault('options', {}).get("GTApprox/CategoricalVariables", [])
-            manager = ConfigurationManager(x, y, technique=kwargs.setdefault('options', {}).get("GTApprox/Technique", []))
+            manager = ConfigurationManager(x, y,
+                                           technique=kwargs.setdefault('options', {}).get("GTApprox/Technique", []))
             encoding = manager.build_configuration(categorical_variables)
-            print(encoding)
 
         if len(encoding) == 0:
             kwargs.setdefault('options', {}).pop("GTApprox/CategoricalVariables", None)

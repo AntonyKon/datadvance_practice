@@ -2,8 +2,6 @@ import category_encoders as ce
 from .encoders import DummyEncoder, SubsampleEncoder
 import numpy as np
 import pandas as pd
-from scipy.stats import chisquare
-from collections import defaultdict
 
 
 def _chisquare(observed, expected=None):
@@ -16,8 +14,10 @@ def _chisquare(observed, expected=None):
 
 class ConfigurationManager:
     """
-    Class, which build configuration for auto_encoder.Builder.
-    >>> manager = ConfigurationManager(x, y, encoders=[SubsampleEncoder, DummyEncoder, ce.BinaryEncoder, ce.OneHotEncoder, ce.LeaveOneOutEncoder])
+    Class, which builds configuration for auto_encoder.Builder.
+    >>> encoders = [SubsampleEncoder, DummyEncoder, ce.BinaryEncoder, ce.OneHotEncoder, ce.LeaveOneOutEncoder]
+    >>> categorical_variables = [1, 2, 3]
+    >>> manager = ConfigurationManager(x, y, encoders=encoders, technique='RSM')
     >>> config = manager.build_configuration(categorical_variables)
     """
 
@@ -29,7 +29,8 @@ class ConfigurationManager:
             self.max_elements = max_elements
 
         def disribution_metric(self, subsample_sizes):  # 704.17172013
-            return _chisquare(subsample_sizes)
+            dof = (len(subsample_sizes) - 1) or 1  # dimenstions of freedom
+            return np.sqrt(_chisquare(subsample_sizes)) / dof  # .apply(lambda size: size / subsample_sizes.max())
 
         def elements_limit(self, subsample_sizes):  # 944.24572173
             mask = self.__elements_min_limit(subsample_sizes)
@@ -50,9 +51,6 @@ class ConfigurationManager:
 
         def dimension_increase(self, encoded_dim):  # 134.96166354
             return encoded_dim / self.initial_dim - 1
-            # candidate_encoders = candidate_encoders.filter(lambda _: subsample_sizes.min() > mni_elements)
-            # penalty = coef1 * std_metric + coef2 * dimension_metric + coefN * len(subsample_sizes)
-            # return max(0, dimension - self.max_shape) * 100
 
         def data_losing(self, transformed_values, column_values):  # 539.48631667
             return abs(len(column_values) - len(transformed_values))
@@ -61,10 +59,11 @@ class ConfigurationManager:
             unique_elements = transformed_values.unique()
             unique_count = transformed_values.nunique()
 
-            real_diff = np.abs(np.diff(unique_elements))  # calculating median of real differences
+            real_diff = np.abs(np.diff(unique_elements)).astype(float)  # calculating median of real differences
+            dof = (len(real_diff) - 1) or 1
             ideal_diff = np.ptp(unique_elements) / (unique_count - 1)  # arithmetic progression (calculating d)
 
-            return _chisquare(real_diff, np.full_like(real_diff, ideal_diff))
+            return np.sqrt(_chisquare(real_diff, np.full_like(real_diff, ideal_diff))) / dof
 
     def __init__(self, x, y, encoders=None, technique=None):
         self.encoders = np.array(encoders)
@@ -90,15 +89,16 @@ class ConfigurationManager:
 
         categorical_variables = self.x.iloc[:, categorical_variables].columns.to_numpy(dtype=str)
         encoders_num = len(self.encoders)
-        steps = 3 * encoders_num
-        coeff = [83.24192459, 0.0152112, 84.34873041, 492.72273704, 343.75608215, 1000000175.1594066]
+        # steps = 3 * encoders_num
+        coeff = [83.24192459, 0.00852112, 84.34873041, 492.72273704, 343.75608215,
+                 1000000175.1594066]  # [83.24192459, 0.00852112, 84.34873041, 492.72273704, 343.75608215, 1000000175.1594066]
         probability_for_best = 0.7
         prediction = np.zeros_like(categorical_variables, dtype=int)
         probability_for_other = (1 - probability_for_best) / (len(prediction) - 1)
         configuration = self.__configure_encoders(prediction, categorical_variables)
         min_penalty = self.__calculate_penalty(configuration, coeff)
 
-        for _ in range(steps):
+        while True:
             penalties = np.zeros_like(prediction, dtype=float)
             for i in range(len(prediction)):
                 tmp = prediction[i]

@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from datetime import datetime
 
 
 class BaseModel(object):
@@ -30,8 +31,36 @@ class BaseModel(object):
             'Median': np.median(absolute_errors),
         }
 
+    @property
+    def details(self):
+        raise NotImplementedError()
+
 
 class Submodels(BaseModel):
+
+    @property
+    def details(self):
+        """
+        Implemetation only for details['Training Time']
+        :return: dict with details of training models (only time yet)
+        """
+
+        details = dict()
+        details['Training Time'] = dict()  # {'Start': '2021-08-24 14:29:53.750659', 'Finish': '2021-08-24 14:29:53.915443', 'Total': '0:00:00.164784'}
+
+        for model in self.models.values():
+            start_time = details['Training Time'].get('Start', model.details['Training Time']['Start'])
+            details['Training Time']['Start'] = str(min(
+                datetime.fromisoformat(start_time), datetime.fromisoformat(model.details['Training Time']['Start'])
+            ))
+
+            finish_time = details['Training Time'].get('Start', model.details['Training Time']['Finish'])
+            details['Training Time']['Finish'] = str(max(
+                datetime.fromisoformat(finish_time), datetime.fromisoformat(model.details['Training Time']['Finish'])
+            ))
+        details['Training Time']['Total'] = str(datetime.fromisoformat(details['Training Time']['Finish']) - datetime.fromisoformat(details['Training Time']['Start']))
+
+        return details
 
     def __init__(self, models=None, columns=None):
         '''
@@ -60,6 +89,10 @@ class Submodels(BaseModel):
 
 
 class Model(BaseModel):
+
+    @property
+    def details(self):
+        return self.model.details
 
     def __init__(self, model=None, encoder=None):
         self.model = model
