@@ -111,7 +111,6 @@ def make_analysis(dataset, categorical_variables, y_columns, technique='RSM', bi
     }
 
     for i in range(tests):
-        print(i)
         education = dataset.sample(n=dataset_sizes[i], random_state=i)
         x, y = education.drop(columns=y_columns), education.loc[:, y_columns]
 
