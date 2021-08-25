@@ -46,7 +46,7 @@ class Submodels(BaseModel):
         """
 
         details = dict()
-        details['Training Time'] = dict()  # {'Start': '2021-08-24 14:29:53.750659', 'Finish': '2021-08-24 14:29:53.915443', 'Total': '0:00:00.164784'}
+        details['Training Time'] = dict()
 
         for model in self.models.values():
             start_time = details['Training Time'].get('Start', model.details['Training Time']['Start'])
