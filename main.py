@@ -9,7 +9,6 @@ dataset = data('BudgetFood').sample(frac=1, random_state=1)
 print(dataset)
 categorical_variables = [4, 5] # indexes of categorical variables
 variable_names = dataset.columns[categorical_variables].to_numpy()
-print(variable_names)
 y_columns = [1] # indexes of output columns
 binarization = True
 technique = 'RSM'
