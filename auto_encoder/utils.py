@@ -16,32 +16,7 @@ def convert_to_timedelta(timedelta_str):
     return timedelta(**params)
 
 
-def get_default_model_RRMS(x, y, x_test, y_test, options):
-    variable_names = x.columns[options['GTApprox/CategoricalVariables']].to_numpy()
-    encoder = ce.OrdinalEncoder(variable_names).fit(x)
-    x = encoder.transform(x)
-
-    builder = gtapprox.Builder()
-    model = builder.build(x, y, options=options)
-    building_time = convert_to_timedelta(model.details['Training Time']['Total']).total_seconds()
-
-    x_test = encoder.transform(x_test)
-    errors = model.validate(x_test, y_test)
-
-    return errors['RRMS'][0], building_time
-
-
-def get_encoded_model_RRMS(x, y, x_test, y_test, options):
-    builder = Builder()
-
-    model = builder.build(x, y, options=options)
-    building_time = convert_to_timedelta(model.details['Training Time']['Total']).total_seconds()
-    errors = model.validate(x_test, y_test)
-
-    return errors['RRMS'], building_time
-
-
-def build_plots(default_model_RRMS, encoded_model_RRMS, default_model_time, encoded_model_time):
+def plot(default_model_RRMS, encoded_model_RRMS, default_model_time, encoded_model_time):
     fig, axes = plt.subplots(2, 1, figsize=(10, 20))
 
     errors = np.unique(np.concatenate([default_model_RRMS, encoded_model_RRMS]))
@@ -70,56 +45,4 @@ def build_plots(default_model_RRMS, encoded_model_RRMS, default_model_time, enco
         ax.legend(fontsize=fontsize)
 
     plt.show()
-
-
-def make_analysis(dataset, categorical_variables, y_columns, technique='RSM', binarization=True):
-    """
-    Script for generating performance analysis to see the difference between default model and model with encoding
-    :param dataset: pd.Dataframe, which consist y_columns
-    :param categorical_variables: numbers of columns with categorical variables
-    :param y_columns: numbers of colums, which will be model outputs
-    :param technique: string, which defines training technique. Default is RSM
-    :param binarization: Flag to turn binarization off for technique, which uses binarization to encode categorical variables
-    :return: None
-    """
-    tests = 100
-    seed = tests // 4
-    size = len(dataset)
-    y_columns = dataset.columns[y_columns].to_numpy()
-    print(y_columns)
-    np.random.seed(seed)
-    # test - 10%
-    # education - 60-70%
-
-    dataset_for_testing = dataset.tail(int(size * 0.1))
-    dataset = dataset.iloc[:-int(size * 0.1)]
-    x_test = dataset_for_testing.drop(columns=y_columns)
-    y_test = dataset_for_testing.loc[:, y_columns]
-
-    default_model_RRMS = np.zeros(shape=tests)
-    encoded_model_RRMS = np.zeros(shape=tests)
-
-    default_model_time = np.zeros(shape=tests, dtype=float)
-    encoded_model_time = np.zeros(shape=tests, dtype=float)
-
-    dataset_sizes = np.random.randint(size * 0.6, size * 0.7, size=tests)
-
-    options = {
-        "GTApprox/CategoricalVariables": categorical_variables,
-        "GTApprox/Technique": technique,
-        "/GTApprox/Binarization": binarization
-    }
-
-    for i in range(tests):
-        education = dataset.sample(n=dataset_sizes[i], random_state=i)
-        x, y = education.drop(columns=y_columns), education.loc[:, y_columns]
-
-        default_model_RRMS[i], default_model_time[i] = get_default_model_RRMS(
-            x, y, x_test, y_test, options.copy()
-        )
-
-        encoded_model_RRMS[i], encoded_model_time[i] = get_encoded_model_RRMS(
-            x, y, x_test, y_test, options.copy()
-        )
-
-    build_plots(default_model_RRMS, encoded_model_RRMS, default_model_time, encoded_model_time)
+    fig.savefig("result.png")
