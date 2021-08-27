@@ -5,32 +5,6 @@ import category_encoders as ce
 from da.p7core_6_23_400 import gtapprox
 
 
-def get_default_model_RRMS(x, y, x_test, y_test, options):
-    variable_names = x.columns[options['GTApprox/CategoricalVariables']].to_numpy()
-    encoder = ce.OrdinalEncoder(variable_names).fit(x)
-    x = encoder.transform(x)
-
-    builder = gtapprox.Builder()
-    model = builder.build(x, y, options=options)
-    building_time = convert_to_timedelta(model.details['Training Time']['Total']).total_seconds()
-
-    x_test = encoder.transform(x_test)
-    errors = model.validate(x_test, y_test)
-
-    return errors['RRMS'][0], building_time
-
-
-def get_encoded_model_RRMS(x, y, x_test, y_test, options):
-    builder = Builder()
-
-    model = builder.build(x, y, options=options)
-    building_time = convert_to_timedelta(model.details['Training Time']['Total']).total_seconds()
-    errors = model.validate(x_test, y_test)
-
-    return errors['RRMS'], building_time
-
-
-
 dataset = data('BudgetFood').sample(frac=1, random_state=1)
 print(dataset)
 categorical_variables = [4, 5] # indexes of categorical variables
@@ -71,7 +45,6 @@ builder = gtapprox.Builder()
 builder2 = Builder()
 
 for i in range(tests):
-    print(i)
     train = dataset.sample(n=dataset_sizes[i], random_state=i)
     x, y = train.drop(columns=y_columns), train.loc[:, y_columns]
     encoder = ce.OrdinalEncoder(variable_names).fit(x)
