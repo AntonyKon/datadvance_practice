@@ -62,7 +62,7 @@ encoded_model_time = np.zeros(shape=tests, dtype=float)
 dataset_sizes = np.random.randint(size * 0.6, size * 0.7, size=tests)
 
 options = {
-    "GTApprox/CategoricalVariables": categorical_variables,
+    "GTApprox/CategoricalVariables": dataset.drop(columns=y_columns).columns.get_indexer_for(variable_names),
     "GTApprox/Technique": technique,
     "/GTApprox/Binarization": binarization
 }
@@ -74,7 +74,6 @@ for i in range(tests):
     print(i)
     train = dataset.sample(n=dataset_sizes[i], random_state=i)
     x, y = train.drop(columns=y_columns), train.loc[:, y_columns]
-    options["GTApprox/CategoricalVariables"] = x.columns.get_indexer_for(variable_names)
     encoder = ce.OrdinalEncoder(variable_names).fit(x)
 
     model = builder.build(encoder.transform(x), y, options=options.copy())
@@ -83,6 +82,6 @@ for i in range(tests):
 
     model2 = builder2.build(x, y, options=options.copy())
     encoded_model_time[i] = convert_to_timedelta(model2.details['Training Time']['Total']).total_seconds()
-    default_model_RRMS[i] = model2.validate(x_test, y_test)['RRMS']
+    encoded_model_RRMS[i] = model2.validate(x_test, y_test)['RRMS']
 
 plot(default_model_RRMS, encoded_model_RRMS, default_model_time, encoded_model_time)
